@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Бартер-хаб</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#F6F1E6; --basil:#123726; --tomato:#E2472F;
+    --honey:#D9A441; --coal:#1C1A16; --line:#DED5C2;
+    --card:#FFFDF8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--cream);color:var(--coal);
+    font-family:'Manrope',system-ui,sans-serif;font-size:15px;line-height:1.45;
+    min-height:100vh;overscroll-behavior:none}
+  .wrap{max-width:520px;margin:0 auto;padding:16px 16px 96px}
+
+  /* ---------- шапка ---------- */
+  header{display:flex;align-items:center;justify-content:space-between;margin:6px 0 18px}
+  .logo{font-family:'Unbounded';font-weight:700;font-size:17px;color:var(--basil);letter-spacing:-.02em}
+  .logo em{font-style:normal;color:var(--tomato)}
+  .role-pill{font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;
+    background:var(--basil);color:var(--cream);border:none;cursor:pointer}
+  .role-pill.rest{background:var(--honey);color:var(--coal)}
+
+  h1{font-family:'Unbounded';font-weight:700;font-size:22px;line-height:1.2;
+    color:var(--basil);margin-bottom:6px;letter-spacing:-.02em}
+  .sub{color:#6b6355;font-size:14px;margin-bottom:18px}
+
+  /* ---------- фильтры ---------- */
+  .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;
+    background:var(--card);border:1px solid var(--line);color:#5a5344;cursor:pointer;transition:.15s}
+  .chip.on{background:var(--basil);border-color:var(--basil);color:var(--cream)}
+
+  /* ---------- талон-оффер (фирменная карточка) ---------- */
+  .ticket{background:var(--card);border-radius:18px;margin-bottom:16px;position:relative;
+    box-shadow:0 2px 10px rgba(28,26,22,.07);overflow:hidden;border:1px solid var(--line)}
+  .t-top{padding:16px 18px 14px}
+  .t-rest{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .t-ava{width:38px;height:38px;border-radius:12px;background:var(--basil);color:var(--cream);
+    display:flex;align-items:center;justify-content:center;font-family:'Unbounded';font-size:15px;font-weight:700;flex-shrink:0}
+  .t-name{font-weight:800;font-size:15px}
+  .t-meta{font-size:12px;color:#8a8171}
+  .t-gives{font-size:14px}
+  .t-gives b{font-weight:800}
+  .t-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--tomato);margin-bottom:4px}
+  /* перфорация между «ресторан даёт» и «блогер даёт» */
+  .perf{position:relative;border-top:2px dashed var(--line);margin:0 18px}
+  .perf::before,.perf::after{content:'';position:absolute;top:-9px;width:18px;height:18px;
+    border-radius:50%;background:var(--cream);border:1px solid var(--line)}
+  .perf::before{left:-27px}
+  .perf::after{right:-27px}
+  .t-bottom{padding:14px 18px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .t-bottom .t-label{color:var(--basil)}
+  .t-ask{font-size:13.5px;color:#4d463a}
+  .btn{font-family:'Manrope';font-weight:800;font-size:13.5px;border:none;border-radius:12px;
+    padding:11px 16px;cursor:pointer;flex-shrink:0;transition:.15s}
+  .btn-tomato{background:var(--tomato);color:#fff}
+  .btn-tomato:active{transform:scale(.96)}
+  .btn-ghost{background:transparent;border:1.5px solid var(--basil);color:var(--basil)}
+  .btn-basil{background:var(--basil);color:var(--cream);width:100%}
+  .applied{background:#e7efe7;color:var(--basil);font-weight:800;font-size:13px;
+    padding:11px 16px;border-radius:12px;flex-shrink:0}
+  .t-city{position:absolute;top:16px;right:18px;font-size:11px;font-weight:700;
+    color:#8a8171;background:var(--cream);padding:4px 9px;border-radius:999px}
+
+  /* ---------- блогеры ---------- */
+  .bcard{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:16px 18px;margin-bottom:12px;display:flex;gap:12px;align-items:center}
+  .b-ava{width:46px;height:46px;border-radius:50%;background:var(--tomato);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-family:'Unbounded';font-weight:700;flex-shrink:0}
+  .b-info{flex:1;min-width:0}
+  .b-nick{font-weight:800}
+  .b-stats{font-size:12.5px;color:#8a8171}
+  .b-tags{font-size:12px;color:var(--basil);font-weight:600}
+
+  /* ---------- профиль / подписка ---------- */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px}
+  .panel h3{font-family:'Unbounded';font-size:15px;color:var(--basil);margin-bottom:10px}
+  .pro{background:linear-gradient(135deg,#123726,#1d5238);color:var(--cream);border:none}
+  .pro h3{color:var(--honey)}
+  .pro .price{font-family:'Unbounded';font-size:26px;margin:6px 0 2px}
+  .pro .price span{font-size:13px;font-family:'Manrope';font-weight:600;opacity:.8}
+  .pro ul{list-style:none;margin:12px 0 16px;font-size:13.5px}
+  .pro li{padding-left:20px;position:relative;margin-bottom:6px}
+  .pro li::before{content:'✓';position:absolute;left:0;color:var(--honey);font-weight:800}
+  .btn-honey{background:var(--honey);color:var(--coal);width:100%}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;font-weight:800;color:#8a8171;margin-bottom:5px;
+    text-transform:uppercase;letter-spacing:.06em}
+  .field input,.field textarea,.field select{width:100%;border:1.5px solid var(--line);border-radius:12px;
+    padding:11px 13px;font:inherit;background:var(--cream);color:var(--coal)}
+  .field textarea{resize:vertical;min-height:70px}
+
+  /* ---------- нижняя навигация ---------- */
+  nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);
+    display:flex;justify-content:space-around;padding:10px 8px calc(10px + env(safe-area-inset-bottom));z-index:10}
+  .tab{background:none;border:none;font-family:'Manrope';font-size:11.5px;font-weight:700;
+    color:#9a9280;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:2px 14px}
+  .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .tab.on{color:var(--basil)}
+  .hidden{display:none}
+  .empty{text-align:center;color:#8a8171;padding:40px 20px;font-size:14px}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);
+    background:var(--coal);color:var(--cream);font-size:13.5px;font-weight:600;
+    padding:11px 18px;border-radius:12px;opacity:0;transition:.25s;pointer-events:none;z-index:20;white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">бартер<em>.</em>хаб</div>
+    <button class="role-pill" id="rolePill" onclick="toggleRole()">я блогер</button>
+  </header>
+
+  <!-- ====== ОФФЕРЫ ====== -->
+  <section id="view-offers">
+    <h1>Офферы заведений</h1>
+    <p class="sub">Заведение угощает — ты снимаешь контент. Честный бартер, без переписок «а сколько у вас охваты».</p>
+    <div class="chips" id="cityChips"></div>
+    <div id="offersList"></div>
+  </section>
+
+  <!-- ====== БЛОГЕРЫ (видят рестораны) ====== -->
+  <section id="view-bloggers" class="hidden">
+    <h1>Каталог блогеров</h1>
+    <p class="sub">Проверенные авторы с реальной статистикой. Приглашай на бартер в один тап.</p>
+    <div id="bloggersList"></div>
+  </section>
+
+  <!-- ====== ПРОФИЛЬ ====== -->
+  <section id="view-profile" class="hidden">
+    <h1 id="profTitle">Мой профиль</h1>
+
+    <!-- профиль блогера -->
+    <div id="profBlogger">
+      <div class="panel">
+        <div class="field"><label>Ник в Instagram*</label><input id="bNick" placeholder="@slavashcherbinin"></div>
+        <div class="field"><label>Подписчики</label><input id="bFoll" inputmode="numeric" placeholder="20 000"></div>
+        <div class="field"><label>Город</label><input id="bCity" placeholder="Москва"></div>
+        <div class="field"><label>Форматы</label><input id="bFmt" placeholder="Reels, сторис, карусели"></div>
+        <button class="btn btn-basil" onclick="saveBlogger()">Сохранить профиль</button>
+      </div>
+      <div class="panel">
+        <h3>Мои отклики</h3>
+        <div id="myApps" class="empty">Пока пусто — выбери оффер во вкладке «Офферы»</div>
+      </div>
+    </div>
+
+    <!-- профиль ресторана -->
+    <div id="profRest" class="hidden">
+      <div class="panel pro" id="proPanel">
+        <h3>Подписка PRO для заведений</h3>
+        <div class="price">2 990 ₽ <span>/ месяц</span></div>
+        <ul>
+          <li>Безлимит офферов на бартер</li>
+          <li>Каталог блогеров с живой статистикой</li>
+          <li>Отклики и приглашения в один тап</li>
+          <li>Уведомления о новых блогерах в городе</li>
+        </ul>
+        <button class="btn btn-honey" onclick="paySub()">Оформить подписку</button>
+      </div>
+      <div class="panel">
+        <h3>Новый оффер</h3>
+        <div class="field"><label>Заведение</label><input id="rName" placeholder="Бар «Штаб»"></div>
+        <div class="field"><label>Что даёте блогеру</label><textarea id="rGive" placeholder="Ужин на двоих до 5 000 ₽, welcome-коктейли"></textarea></div>
+        <div class="field"><label>Что хотите взамен</label><textarea id="rAsk" placeholder="1 Reels + 3 сторис с отметкой"></textarea></div>
+        <div class="field"><label>Мин. подписчиков у блогера</label>
+          <select id="rMin"><option>от 5 000</option><option>от 10 000</option><option>от 30 000</option><option>от 100 000</option></select>
+        </div>
+        <button class="btn btn-basil" onclick="publishOffer()">Опубликовать оффер</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<nav>
+  <button class="tab on" data-v="offers" onclick="go('offers',this)">
+    <svg viewBox="0 0 24 24"><path d="M4 7h16M4 7v11a2 2 0 002 2h12a2 2 0 002-2V7M4 7l2-3h12l2 3M9 11h6"/></svg>Офферы</button>
+  <button class="tab" data-v="bloggers" onclick="go('bloggers',this)">
+    <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.5 5.5-4.5S13.9 16 14.5 19M16 5.5a3 3 0 010 5M20.5 19c-.4-2.2-1.6-3.6-3.5-4.2"/></svg>Блогеры</button>
+  <button class="tab" data-v="profile" onclick="go('profile',this)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.5 3.6-5.5 7-5.5s6.2 2 7 5.5"/></svg>Профиль</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg){ tg.ready(); tg.expand(); }
+
+// ==== конфиг: подставь адрес своего API после деплоя бота ====
+const API = ''; // например 'https://ваш-домен.ру/api'
+
+// демо-данные (показываются, пока API не подключён)
+let offers = [
+ {id:1, rest:'Бар «Штаб»', city:'Москва', cat:'Бар',
+  gives:'Ужин на двоих до 5 000 ₽ + авторские коктейли',
+  asks:'1 Reels + 3 сторис с отметкой и геоточкой', min:'от 10 000'},
+ {id:2, rest:'Кофейня «Зерно»', city:'Санкт-Петербург', cat:'Кофейня',
+  gives:'Завтрак + любые напитки на компанию до 3 человек',
+  asks:'Карусель-обзор + 2 сторис', min:'от 5 000'},
+ {id:3, rest:'«Юрта» Chemal', city:'Алтай', cat:'Ресторан',
+  gives:'Ужин из локальных продуктов + дегустация чая',
+  asks:'1 Reels о заведении в тревел-контенте', min:'от 10 000'},
+ {id:4, rest:'Гриль «Дым»', city:'Москва', cat:'Ресторан',
+  gives:'Сет мяса на компанию до 8 000 ₽',
+  asks:'Reels-дегустация + отметка в сторис', min:'от 30 000'},
+];
+let bloggers = [
+ {id:1, nick:'@slavashcherbinin', foll:'20K', city:'Москва', tags:'лайфстайл · еда · путешествия', er:'ER 6,2%'},
+ {id:2, nick:'@marina.eats', foll:'34K', city:'Москва', tags:'фудблог · обзоры ресторанов', er:'ER 4,8%'},
+ {id:3, nick:'@piter_walks', foll:'12K', city:'Санкт-Петербург', tags:'город · места · кофе', er:'ER 7,1%'},
+];
+let role = 'blogger';          // blogger | restaurant
+let cityFilter = 'Все';
+let applied = new Set();
+
+// ==== навигация ====
+function go(v, el){
+  document.querySelectorAll('section').forEach(s=>s.classList.add('hidden'));
+  document.getElementById('view-'+v).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  tg?.HapticFeedback?.selectionChanged();
+}
+function toggleRole(){
+  role = role==='blogger' ? 'restaurant' : 'blogger';
+  const p = document.getElementById('rolePill');
+  p.textContent = role==='blogger' ? 'я блогер' : 'я заведение';
+  p.classList.toggle('rest', role==='restaurant');
+  document.getElementById('profBlogger').classList.toggle('hidden', role!=='blogger');
+  document.getElementById('profRest').classList.toggle('hidden', role!=='restaurant');
+  toast(role==='blogger' ? 'Режим блогера' : 'Режим заведения');
+  renderOffers();
+}
+
+// ==== офферы ====
+function renderCityChips(){
+  const cities = ['Все', ...new Set(offers.map(o=>o.city))];
+  document.getElementById('cityChips').innerHTML = cities.map(c=>
+    `<button class="chip ${c===cityFilter?'on':''}" onclick="setCity('${c}')">${c}</button>`).join('');
+}
+function setCity(c){ cityFilter=c; renderCityChips(); renderOffers(); }
+function renderOffers(){
+  const list = offers.filter(o=>cityFilter==='Все'||o.city===cityFilter);
+  document.getElementById('offersList').innerHTML = list.map(o=>`
+    <div class="ticket">
+      <span class="t-city">${o.city}</span>
+      <div class="t-top">
+        <div class="t-rest">
+          <div class="t-ava">${o.rest.replace(/[«»]/g,'').trim()[0]}</div>
+          <div><div class="t-name">${o.rest}</div><div class="t-meta">${o.cat} · блогеры ${o.min}</div></div>
+        </div>
+        <div class="t-label">Заведение даёт</div>
+        <div class="t-gives">${o.gives}</div>
+      </div>
+      <div class="perf"></div>
+      <div class="t-bottom">
+        <div><div class="t-label">Взамен</div><div class="t-ask">${o.asks}</div></div>
+        ${applied.has(o.id)
+          ? `<span class="applied">✓ Отклик</span>`
+          : `<button class="btn btn-tomato" onclick="apply(${o.id})">Хочу!</button>`}
+      </div>
+    </div>`).join('') || '<div class="empty">В этом городе пока нет офферов</div>';
+}
+async function apply(id){
+  applied.add(id); renderOffers(); renderMyApps();
+  tg?.HapticFeedback?.notificationOccurred('success');
+  toast('Отклик отправлен заведению 🎉');
+  if (API) fetch(API+'/apply', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({offer_id:id, initData: tg?.initData})}).catch(()=>{});
+}
+function renderMyApps(){
+  const el = document.getElementById('myApps');
+  if (!applied.size){ el.className='empty'; el.textContent='Пока пусто — выбери оффер во вкладке «Офферы»'; return; }
+  el.className=''; el.innerHTML = [...applied].map(id=>{
+    const o = offers.find(x=>x.id===id);
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--line);font-size:14px">
+      <b>${o.rest}</b><br><span style="color:#8a8171;font-size:12.5px">Ждёт ответа заведения</span></div>`;
+  }).join('');
+}
+
+// ==== блогеры ====
+function renderBloggers(){
+  document.getElementById('bloggersList').innerHTML = bloggers.map(b=>`
+    <div class="bcard">
+      <div class="b-ava">${b.nick[1].toUpperCase()}</div>
+      <div class="b-info">
+        <div class="b-nick">${b.nick} <span style="color:var(--tomato)">· ${b.foll}</span></div>
+        <div class="b-stats">${b.city} · ${b.er}</div>
+        <div class="b-tags">${b.tags}</div>
+      </div>
+      <button class="btn btn-ghost" onclick="invite('${b.nick}')">Позвать</button>
+    </div>`).join('');
+}
+function invite(nick){
+  if (role!=='restaurant'){ toast('Приглашать блогеров могут заведения с PRO'); return; }
+  toast('Приглашение отправлено '+nick);
+  tg?.HapticFeedback?.notificationOccurred('success');
+}
+
+// ==== профиль ====
+function saveBlogger(){
+  const nick = document.getElementById('bNick').value.trim();
+  if(!nick){ toast('Укажи ник в Instagram'); return; }
+  toast('Профиль сохранён ✓');
+  if (API) fetch(API+'/blogger', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({nick, followers:document.getElementById('bFoll').value,
+      city:document.getElementById('bCity').value, formats:document.getElementById('bFmt').value,
+      initData: tg?.initData})}).catch(()=>{});
+}
+function publishOffer(){
+  const name = document.getElementById('rName').value.trim();
+  const give = document.getElementById('rGive').value.trim();
+  const ask  = document.getElementById('rAsk').value.trim();
+  if(!name||!give||!ask){ toast('Заполни все поля оффера'); return; }
+  offers.unshift({id:Date.now(), rest:name, city:'Мой город', cat:'Заведение',
+    gives:give, asks:ask, min:document.getElementById('rMin').value});
+  renderCityChips(); renderOffers();
+  toast('Оффер опубликован 🚀');
+  if (API) fetch(API+'/offer', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, gives:give, asks:ask,
+      min:document.getElementById('rMin').value, initData: tg?.initData})}).catch(()=>{});
+}
+function paySub(){
+  // бот пришлёт инвойс в чат (Telegram Stars) — см. bot.py
+  if (tg){ tg.sendData(JSON.stringify({action:'subscribe'})); }
+  else toast('Оплата доступна внутри Telegram');
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+// ==== загрузка данных с API (если подключён) ====
+(async ()=>{
+  if (API){
+    try{
+      const r = await fetch(API+'/offers'); const d = await r.json();
+      if (Array.isArray(d) && d.length) offers = d;
+    }catch(e){}
+  }
+  renderCityChips(); renderOffers(); renderBloggers();
+})();
+</script>
+</body>
+</html>
